@@ -1,120 +1,183 @@
 --=====================================================
 -- ASPAN-HUB FINAL | Fish It
--- VinzHub Method (GUI + VirtualInput)
+-- Method: TAP HERE (Visual Clicker Only)
 --=====================================================
 
 --================ SERVICES =================
 local Players = game:GetService("Players")
-local VIM = game:GetService("VirtualInputManager")
+local RS = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
+local Backpack = player:WaitForChild("Backpack")
+
 math.randomseed(tick())
 
---================ AUTO FISH CORE =================
-local AutoFish = {
-    Enabled = false,
-    Casting = false,
-    Mode = "SAFE" -- SAFE / FAST
-}
-
+--================ CONFIG =================
 local CFG = {
-    SAFE = { castGap=0.45, scan=0.045, min=0.12, max=0.18 },
-    FAST = { castGap=0.25, scan=0.025, min=0.07, max=0.11 }
+    RodKeyword = "rod",
+    TapKeywords = {"tap","click","strike"},
+    StartKeywords = {"start","fish","cast"},
+    ScanMapKeywords = {"island","pulau","treasure","statue","sisyphus","dock","port","harbor","cave","ruin","temple"},
 }
 
-local function rand(a,b)
-    return a + (b-a)*math.random()
+--================ UTIL =================
+local function rand(a,b) return a + (b-a)*math.random() end
+
+local function equipRod()
+    local char = player.Character or player.CharacterAdded:Wait()
+    for _,t in ipairs(char:GetChildren()) do
+        if t:IsA("Tool") and t.Name:lower():find(CFG.RodKeyword) then
+            return true
+        end
+    end
+    for _,t in ipairs(Backpack:GetChildren()) do
+        if t:IsA("Tool") and t.Name:lower():find(CFG.RodKeyword) then
+            char.Humanoid:EquipTool(t)
+            return true
+        end
+    end
 end
 
-local function mouseClick()
-    VIM:SendMouseButtonEvent(0,0,0,true,game,0)
-    task.wait(0.035)
-    VIM:SendMouseButtonEvent(0,0,0,false,game,0)
-end
-
--- Find fishing minigame GUI
-local function findMinigame()
+local function findTextButtonByKeywords(keywords)
     local pg = player:FindFirstChild("PlayerGui")
     if not pg then return end
-
-    for _,gui in ipairs(pg:GetChildren()) do
-        if gui:IsA("ScreenGui") and gui.Enabled then
-            for _,f in ipairs(gui:GetDescendants()) do
-                if f:IsA("Frame") and f.Visible then
-                    for _,c in ipairs(f:GetDescendants()) do
-                        if c:IsA("Frame") and c.Size.X.Scale > 0 and c.Size.X.Scale < 1 then
-                            return f
-                        end
-                    end
+    for _,v in ipairs(pg:GetDescendants()) do
+        if v:IsA("TextButton") and v.Visible then
+            local txt = (v.Text or ""):lower()
+            for _,k in ipairs(keywords) do
+                if txt:find(k) then
+                    return v
                 end
             end
         end
     end
 end
 
-local function findMarker(bar)
-    for _,c in ipairs(bar:GetDescendants()) do
-        if c:IsA("Frame") and c.Visible then
-            if c.Size.X.Scale > 0 and c.Size.X.Scale < 1 then
-                return c
-            end
-        end
-    end
+local function safeClick(btn)
+    if not btn then return end
+    pcall(function()
+        firesignal(btn.MouseButton1Click)
+    end)
 end
 
-local function safeWindow(marker)
-    local x = marker.Size.X.Scale
-    return x >= 0.46 and x <= 0.58
-end
+--================ AUTO FISH (TAP HERE) =================
+local AutoFish = {
+    Enabled = false,
+    Busy = false,
+}
 
--- CAST LOOP
 task.spawn(function()
     while true do
-        if AutoFish.Enabled and not AutoFish.Casting then
-            AutoFish.Casting = true
-            mouseClick()
+        if AutoFish.Enabled then
+            equipRod()
+
+            -- auto start fishing (jika ada)
+            local startBtn = findTextButtonByKeywords(CFG.StartKeywords)
+            if startBtn then
+                safeClick(startBtn)
+                task.wait(rand(0.12,0.18))
+            end
+
+            -- auto tap here / strike
+            local tapBtn = findTextButtonByKeywords(CFG.TapKeywords)
+            if tapBtn and not AutoFish.Busy then
+                AutoFish.Busy = true
+                safeClick(tapBtn)
+                task.wait(rand(0.12,0.18))
+                AutoFish.Busy = false
+            end
         end
-        task.wait(CFG[AutoFish.Mode].castGap)
+        task.wait(0.08)
     end
 end)
 
--- REEL LOOP
-task.spawn(function()
-    while true do
-        if AutoFish.Enabled and AutoFish.Casting then
-            local bar = findMinigame()
-            if bar then
-                local t0 = tick()
-                while AutoFish.Enabled and AutoFish.Casting and tick()-t0 < 3 do
-                    local mk = findMarker(bar)
-                    if mk and safeWindow(mk) then
-                        task.wait(rand(CFG[AutoFish.Mode].min, CFG[AutoFish.Mode].max))
-                        mouseClick()
-                        break
-                    end
-                    task.wait(CFG[AutoFish.Mode].scan)
+--================ AUTO SELL =================
+local AutoSell = {
+    Enabled = true,
+    Cooldown = false
+}
+
+local function trySell()
+    if AutoSell.Cooldown then return end
+    AutoSell.Cooldown = true
+
+    -- ProximityPrompt (aman)
+    for _,p in ipairs(workspace:GetDescendants()) do
+        if p:IsA("ProximityPrompt") then
+            local a = (p.ActionText or ""):lower()
+            if a:find("sell") or a:find("jual") then
+                p:InputHoldBegin()
+                task.wait(0.25)
+                p:InputHoldEnd()
+                task.delay(1.8,function() AutoSell.Cooldown=false end)
+                return
+            end
+        end
+    end
+
+    -- fallback remote
+    for _,r in ipairs(RS:GetDescendants()) do
+        if r:IsA("RemoteEvent") and r.Name:lower():find("sell") then
+            r:FireServer()
+            task.delay(1.8,function() AutoSell.Cooldown=false end)
+            return
+        end
+    end
+
+    AutoSell.Cooldown = false
+end
+
+-- trigger sell setelah dapat ikan (jika ada event)
+for _,r in ipairs(RS:GetDescendants()) do
+    if r:IsA("RemoteEvent") and (r.Name=="ObtainedNewFishNotification" or r.Name=="FishCaught") then
+        r.OnClientEvent:Connect(function()
+            if AutoSell.Enabled then
+                task.wait(0.4)
+                trySell()
+            end
+        end)
+    end
+end
+
+--================ MAP SCANNER + TELEPORT =================
+local MapScanner = { Results = {} }
+
+local function scanMap()
+    table.clear(MapScanner.Results)
+    for _,o in ipairs(workspace:GetDescendants()) do
+        if o:IsA("BasePart") or o:IsA("Model") then
+            local n = o.Name:lower()
+            for _,k in ipairs(CFG.ScanMapKeywords) do
+                if n:find(k) then
+                    local cf = o:IsA("Model") and o:GetPivot() or o.CFrame
+                    table.insert(MapScanner.Results,{Name=o.Name, CFrame=cf})
+                    break
                 end
             end
-            task.wait(0.35)
-            AutoFish.Casting = false
         end
-        task.wait(0.03)
     end
-end)
+end
+
+local function teleport(cf)
+    local char = player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if hrp then hrp.CFrame = cf + Vector3.new(0,5,0) end
+end
 
 --================ UI =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.Name = "ASPAN_HUB"
 gui.ResetOnSpawn = false
 
+-- Main
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.fromScale(0.50,0.52)
-main.Position = UDim2.fromScale(0.25,0.24)
+main.Size = UDim2.fromScale(0.52,0.56)
+main.Position = UDim2.fromScale(0.24,0.22)
 main.BackgroundColor3 = Color3.fromRGB(18,18,18)
 main.BorderSizePixel = 0
-Instance.new("UICorner", main).CornerRadius = UDim.new(0,12)
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,14)
 
 -- Header
 local header = Instance.new("Frame", main)
@@ -122,10 +185,10 @@ header.Size = UDim2.fromScale(1,0.12)
 header.BackgroundColor3 = Color3.fromRGB(24,24,24)
 header.Active = true
 header.Draggable = true
-Instance.new("UICorner", header).CornerRadius = UDim.new(0,12)
+Instance.new("UICorner", header).CornerRadius = UDim.new(0,14)
 
 local title = Instance.new("TextLabel", header)
-title.Size = UDim2.fromScale(0.65,1)
+title.Size = UDim2.fromScale(0.7,1)
 title.Position = UDim2.fromScale(0.04,0)
 title.Text = "ASPAN-HUB | Fish It"
 title.Font = Enum.Font.GothamBold
@@ -150,6 +213,7 @@ end
 local minBtn = hBtn("—",0.86)
 local closeBtn = hBtn("X",0.93)
 
+-- Body
 local body = Instance.new("Frame", main)
 body.Size = UDim2.fromScale(1,0.88)
 body.Position = UDim2.fromScale(0,0.12)
@@ -159,21 +223,53 @@ body.BackgroundTransparency = 1
 local sidebar = Instance.new("Frame", body)
 sidebar.Size = UDim2.fromScale(0.22,1)
 sidebar.BackgroundColor3 = Color3.fromRGB(22,22,22)
-Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0,10)
+Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0,12)
 
 -- Content
 local content = Instance.new("Frame", body)
 content.Size = UDim2.fromScale(0.78,1)
 content.Position = UDim2.fromScale(0.22,0)
 content.BackgroundColor3 = Color3.fromRGB(20,20,20)
-Instance.new("UICorner", content).CornerRadius = UDim.new(0,10)
+Instance.new("UICorner", content).CornerRadius = UDim.new(0,12)
 
-local farm = Instance.new("Frame", content)
-farm.Size = UDim2.fromScale(1,1)
-farm.BackgroundTransparency = 1
+-- Pages
+local pages = {}
+local function page(name)
+    local f = Instance.new("Frame", content)
+    f.Size = UDim2.fromScale(1,1)
+    f.BackgroundTransparency = 1
+    f.Visible = false
+    pages[name]=f
+    return f
+end
+
+local farm = page("Farm")
+local map = page("Map")
+local profile = page("Profile")
+farm.Visible = true
+
+local function sideBtn(txt,y)
+    local b = Instance.new("TextButton", sidebar)
+    b.Size = UDim2.fromScale(0.9,0.1)
+    b.Position = UDim2.fromScale(0.05,y)
+    b.Text = txt
+    b.Font = Enum.Font.Gotham
+    b.TextScaled = true
+    b.BackgroundColor3 = Color3.fromRGB(45,45,45)
+    b.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
+    b.MouseButton1Click:Connect(function()
+        for _,p in pairs(pages) do p.Visible=false end
+        pages[txt].Visible=true
+    end)
+end
+
+sideBtn("Farm",0.08)
+sideBtn("Map",0.22)
+sideBtn("Profile",0.36)
 
 -- Toggle pill
-local function toggle(parent,y,default,cb)
+local function togglePill(parent,y,default,cb)
     local state = default
     local base = Instance.new("Frame", parent)
     base.Size = UDim2.fromScale(0.22,0.08)
@@ -209,8 +305,8 @@ local function toggle(parent,y,default,cb)
     cb(state)
 end
 
-local function label(text,y)
-    local l = Instance.new("TextLabel", farm)
+local function label(parent, text, y)
+    local l = Instance.new("TextLabel", parent)
     l.Size = UDim2.fromScale(0.45,0.08)
     l.Position = UDim2.fromScale(0.12,y)
     l.Text = text
@@ -221,32 +317,90 @@ local function label(text,y)
     l.TextXAlignment = Enum.TextXAlignment.Left
 end
 
-label("Auto Fishing",0.22)
-toggle(farm,0.22,false,function(v)
-    AutoFish.Enabled = v
-    if not v then AutoFish.Casting=false end
+-- Farm content
+label(farm,"Auto Fishing (Tap Here)",0.18)
+togglePill(farm,0.18,false,function(v) AutoFish.Enabled=v end)
+
+label(farm,"Auto Sell Fish",0.34)
+togglePill(farm,0.34,true,function(v) AutoSell.Enabled=v end)
+
+-- Map content
+map:ClearAllChildren()
+local scanBtn = Instance.new("TextButton", map)
+scanBtn.Size = UDim2.fromScale(0.4,0.12)
+scanBtn.Position = UDim2.fromScale(0.05,0.05)
+scanBtn.Text = "SCAN MAP"
+scanBtn.Font = Enum.Font.GothamBold
+scanBtn.TextScaled = true
+scanBtn.BackgroundColor3 = Color3.fromRGB(45,45,45)
+scanBtn.TextColor3 = Color3.new(1,1,1)
+Instance.new("UICorner", scanBtn)
+
+local list = Instance.new("ScrollingFrame", map)
+list.Size = UDim2.fromScale(0.9,0.75)
+list.Position = UDim2.fromScale(0.05,0.22)
+list.CanvasSize = UDim2.new(0,0,0,0)
+list.ScrollBarImageTransparency = 0.2
+list.BackgroundTransparency = 1
+local layout = Instance.new("UIListLayout", list)
+layout.Padding = UDim.new(0,6)
+
+local function refreshList()
+    for _,c in ipairs(list:GetChildren()) do
+        if c:IsA("TextButton") then c:Destroy() end
+    end
+    for _,d in ipairs(MapScanner.Results) do
+        local b = Instance.new("TextButton", list)
+        b.Size = UDim2.new(1,-10,0,34)
+        b.Text = d.Name
+        b.Font = Enum.Font.Gotham
+        b.TextScaled = true
+        b.BackgroundColor3 = Color3.fromRGB(50,50,50)
+        b.TextColor3 = Color3.new(1,1,1)
+        Instance.new("UICorner", b)
+        b.MouseButton1Click:Connect(function() teleport(d.CFrame) end)
+    end
+    task.wait()
+    list.CanvasSize = UDim2.new(0,0,0,layout.AbsoluteContentSize.Y+10)
+end
+
+scanBtn.MouseButton1Click:Connect(function()
+    scanMap()
+    refreshList()
 end)
 
-local modeBtn = Instance.new("TextButton", farm)
-modeBtn.Size = UDim2.fromScale(0.38,0.12)
-modeBtn.Position = UDim2.fromScale(0.12,0.40)
-modeBtn.Text = "MODE : SAFE"
-modeBtn.Font = Enum.Font.GothamBold
-modeBtn.TextScaled = true
-modeBtn.BackgroundColor3 = Color3.fromRGB(45,45,45)
-modeBtn.TextColor3 = Color3.new(1,1,1)
-Instance.new("UICorner", modeBtn).CornerRadius = UDim.new(0,10)
+-- Profile
+local info = Instance.new("TextLabel", profile)
+info.Size = UDim2.fromScale(1,1)
+info.BackgroundTransparency = 1
+info.Font = Enum.Font.Gotham
+info.TextScaled = true
+info.TextColor3 = Color3.new(1,1,1)
+info.Text = "Username: "..player.Name.."\nHub: ASPAN-HUB"
 
-modeBtn.MouseButton1Click:Connect(function()
-    AutoFish.Mode = (AutoFish.Mode=="SAFE") and "FAST" or "SAFE"
-    modeBtn.Text = "MODE : "..AutoFish.Mode
-end)
+-- Minimize to small box
+local minimized = false
+local mini = Instance.new("TextButton", gui)
+mini.Size = UDim2.fromOffset(140,36)
+mini.Position = UDim2.fromScale(0.02,0.85)
+mini.Text = "ASPAN HUB"
+mini.Font = Enum.Font.GothamBold
+mini.TextScaled = true
+mini.BackgroundColor3 = Color3.fromRGB(24,24,24)
+mini.TextColor3 = Color3.fromRGB(0,255,200)
+mini.Visible = false
+Instance.new("UICorner", mini)
 
-local minimized=false
 minBtn.MouseButton1Click:Connect(function()
-    minimized=not minimized
-    body.Visible=not minimized
-    main.Size=minimized and UDim2.fromScale(0.50,0.12) or UDim2.fromScale(0.50,0.52)
+    minimized = true
+    main.Visible = false
+    mini.Visible = true
+end)
+
+mini.MouseButton1Click:Connect(function()
+    minimized = false
+    main.Visible = true
+    mini.Visible = false
 end)
 
 closeBtn.MouseButton1Click:Connect(function()
