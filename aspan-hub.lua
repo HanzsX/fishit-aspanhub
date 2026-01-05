@@ -1,43 +1,21 @@
 --=====================================================
--- ASPAN-HUB FINAL UI (CLEAN + ANIMATED + THEME)
+-- ASPAN-HUB XENO SAFE VERSION
 --=====================================================
 
 --// SERVICES
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local HttpService = game:GetService("HttpService")
 local player = Players.LocalPlayer
 
 --=====================================================
--- SAVE SYSTEM
---=====================================================
-local SAVE_FILE = "aspan_hub_settings.json"
-local Settings = {
-    AutoLegit = false,
-    Theme = "Green"
-}
-
-pcall(function()
-    if readfile and isfile and isfile(SAVE_FILE) then
-        Settings = HttpService:JSONDecode(readfile(SAVE_FILE))
-    end
-end)
-
-local function saveSettings()
-    if writefile then
-        writefile(SAVE_FILE, HttpService:JSONEncode(Settings))
-    end
-end
-
---=====================================================
--- STATE (LOGIC TETAP)
+-- STATE (LOGIC KAMU COLOKKAN SENDIRI)
 --=====================================================
 local Mode = { Legit = false, Blatant = false }
 local Hub = { Enabled = false }
 local AutoFishingInGame = false
 
 --=====================================================
--- THEME SYSTEM
+-- THEME SYSTEM (NO SAVE, XENO SAFE)
 --=====================================================
 local Themes = {
     Green = {
@@ -60,7 +38,7 @@ local Themes = {
     }
 }
 
-local CurrentTheme = Themes[Settings.Theme]
+local CurrentTheme = Themes.Green
 local ThemedObjects = {}
 
 local function ApplyTheme()
@@ -74,9 +52,10 @@ end
 --=====================================================
 -- GUI ROOT
 --=====================================================
-local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "ASPAN_HUB"
+local gui = Instance.new("ScreenGui")
+gui.Name = "ASPAN_HUB_XENO"
 gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
 local main = Instance.new("Frame", gui)
 main.Size = UDim2.fromOffset(620,380)
@@ -84,25 +63,33 @@ main.Position = UDim2.fromScale(0.5,0.5)
 main.AnchorPoint = Vector2.new(0.5,0.5)
 main.BackgroundColor3 = Color3.fromRGB(17,18,22)
 main.BorderSizePixel = 0
-main.Active, main.Draggable = true, true
+main.Active = true
+main.Draggable = true
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,16)
 
--- Responsive (PC + Android)
+--=====================================================
+-- SAFE RESPONSIVE SCALE (XENO)
+--=====================================================
 local scale = Instance.new("UIScale", main)
-local function updateScale()
-    local v = workspace.CurrentCamera.ViewportSize
-    scale.Scale = math.clamp(v.X / 900, 0.75, 1)
-end
-updateScale()
-workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+task.spawn(function()
+    while not workspace.CurrentCamera do
+        task.wait()
+    end
+    local cam = workspace.CurrentCamera
+    local function update()
+        scale.Scale = math.clamp(cam.ViewportSize.X / 900, 0.75, 1)
+    end
+    update()
+    cam:GetPropertyChangedSignal("ViewportSize"):Connect(update)
+end)
 
 --=====================================================
--- TOP BAR
+-- TITLE
 --=====================================================
 local title = Instance.new("TextLabel", main)
 title.Size = UDim2.new(1,-20,0,44)
 title.Position = UDim2.fromOffset(16,0)
-title.Text = "ASPAN-HUB • Fish It"
+title.Text = "ASPAN-HUB • Fish It (XENO)"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
 title.TextXAlignment = Left
@@ -121,12 +108,12 @@ sidebar.Size = UDim2.fromOffset(150,336)
 sidebar.BackgroundColor3 = Color3.fromRGB(14,15,18)
 sidebar.BorderSizePixel = 0
 
-local sbLayout = Instance.new("UIListLayout", sidebar)
-sbLayout.Padding = UDim.new(0,6)
-sbLayout.HorizontalAlignment = Center
+local layout = Instance.new("UIListLayout", sidebar)
+layout.Padding = UDim.new(0,6)
+layout.HorizontalAlignment = Center
 
-local sbPad = Instance.new("UIPadding", sidebar)
-sbPad.PaddingTop = UDim.new(0,10)
+local pad = Instance.new("UIPadding", sidebar)
+pad.PaddingTop = UDim.new(0,10)
 
 local function SidebarButton(text)
     local b = Instance.new("TextButton", sidebar)
@@ -198,7 +185,7 @@ task.spawn(function()
 end)
 
 --=====================================================
--- ANIMATED TOGGLE
+-- ANIMATED TOGGLE (XENO SAFE)
 --=====================================================
 local function AnimatedToggle(parent, y, text, callback)
     local holder = Instance.new("Frame", parent)
@@ -218,7 +205,8 @@ local function AnimatedToggle(parent, y, text, callback)
     lbl.Size = UDim2.new(1,-90,1,0)
     lbl.Position = UDim2.fromOffset(16,0)
 
-    local bg = Instance.new("Frame", holder)
+    local bg = Instance.new("TextButton", holder)
+    bg.Text = ""
     bg.Size = UDim2.fromOffset(52,26)
     bg.Position = UDim2.fromScale(1,0.5)
     bg.AnchorPoint = Vector2.new(1,0.5)
@@ -247,11 +235,8 @@ local function AnimatedToggle(parent, y, text, callback)
         callback(v)
     end
 
-    bg.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1
-        or i.UserInputType == Enum.UserInputType.Touch then
-            set(not state)
-        end
+    bg.MouseButton1Click:Connect(function()
+        set(not state)
     end)
 
     ThemedObjects[bg] = function(t)
@@ -260,30 +245,18 @@ local function AnimatedToggle(parent, y, text, callback)
 end
 
 --=====================================================
--- AUTO TAB TOGGLES (LOGIC KAMU)
+-- AUTO TAB (COLOKKAN LOGIC KAMU)
 --=====================================================
 AnimatedToggle(AutoTab, 50, "Auto Legit++ (Adaptive)", function(v)
-    -- stopAll()
-    if v then
-        Mode.Legit = true
-        Hub.Enabled = true
-        Settings.AutoLegit = true
-        -- setAutoFishingState(true)
-    else
-        Settings.AutoLegit = false
-    end
-    saveSettings()
+    Mode.Legit = v
+    Hub.Enabled = v
+    -- setAutoFishingState(v)
 end)
 
 AnimatedToggle(AutoTab, 120, "Auto Blatant (Ultra)", function(v)
-    -- stopAll()
-    if v then
-        Mode.Blatant = true
-        Hub.Enabled = true
-        -- UltraBlatant.Start()
-    end
-    Settings.AutoLegit = false
-    saveSettings()
+    Mode.Blatant = v
+    Hub.Enabled = v
+    -- UltraBlatant.Start()
 end)
 
 --=====================================================
@@ -302,9 +275,7 @@ local function ThemeButton(x, name, color)
     Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
 
     b.MouseButton1Click:Connect(function()
-        Settings.Theme = name
         CurrentTheme = Themes[name]
-        saveSettings()
         ApplyTheme()
     end)
 end
@@ -314,7 +285,7 @@ ThemeButton(130,"Red",Themes.Red.Accent)
 ThemeButton(240,"Purple",Themes.Purple.Accent)
 
 --=====================================================
--- APPLY THEME ON LOAD
+-- INIT
 --=====================================================
 ApplyTheme()
-print("ASPAN-HUB FINAL UI LOADED")
+print("ASPAN-HUB XENO SAFE LOADED")
