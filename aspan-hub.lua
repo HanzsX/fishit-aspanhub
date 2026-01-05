@@ -1,5 +1,206 @@
 --==================================================
--- ASPAN-HUB UI FINAL
+-- ASPAN-HUB UI FINAL--=====================================================
+--  ASPAN-HUB FINAL UI (LEGIT++ & BLATANT READY)
+--=====================================================
+
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LP = Players.LocalPlayer
+local PlayerGui = LP:WaitForChild("PlayerGui")
+
+--======================
+-- MODULE PLACEHOLDER
+-- (isi logic sendiri)
+--======================
+local AutoLegit = {
+    Enabled = false,
+    Start = function()
+        AutoLegit.Enabled = true
+        print("[ASPAN] Auto Legit++ ON")
+    end,
+    Stop = function()
+        AutoLegit.Enabled = false
+        print("[ASPAN] Auto Legit++ OFF")
+    end
+}
+
+local AutoBlatant = {
+    Enabled = false,
+    Start = function()
+        AutoBlatant.Enabled = true
+        print("[ASPAN] Auto Blatant ON")
+    end,
+    Stop = function()
+        AutoBlatant.Enabled = false
+        print("[ASPAN] Auto Blatant OFF")
+    end
+}
+
+--======================
+-- GUI ROOT
+--======================
+local gui = Instance.new("ScreenGui")
+gui.Name = "ASPAN_HUB"
+gui.ResetOnSpawn = false
+gui.Parent = PlayerGui
+
+--======================
+-- MAIN WINDOW
+--======================
+local main = Instance.new("Frame", gui)
+main.Size = UDim2.fromScale(0.55, 0.6)
+main.Position = UDim2.fromScale(0.22, 0.2)
+main.BackgroundColor3 = Color3.fromRGB(18,20,25)
+main.BackgroundTransparency = 0.05
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,16)
+
+--======================
+-- SIDEBAR
+--======================
+local sidebar = Instance.new("Frame", main)
+sidebar.Size = UDim2.new(0.22,0,1,0)
+sidebar.BackgroundColor3 = Color3.fromRGB(22,24,30)
+Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0,16)
+
+local title = Instance.new("TextLabel", sidebar)
+title.Text = "ASPAN HUB"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.TextColor3 = Color3.fromRGB(0,200,170)
+title.BackgroundTransparency = 1
+title.Size = UDim2.new(1,0,0,50)
+
+--======================
+-- CONTENT HOLDER
+--======================
+local content = Instance.new("Frame", main)
+content.Position = UDim2.new(0.24,0,0,0)
+content.Size = UDim2.new(0.76,0,1,0)
+content.BackgroundTransparency = 1
+
+--======================
+-- PAGE SYSTEM
+--======================
+local pages = {}
+
+local function newPage(name)
+    local f = Instance.new("Frame", content)
+    f.Size = UDim2.fromScale(1,1)
+    f.Visible = false
+    f.BackgroundTransparency = 1
+
+    local layout = Instance.new("UIListLayout", f)
+    layout.Padding = UDim.new(0,14)
+
+    pages[name] = f
+    return f
+end
+
+local function showPage(name)
+    for _,p in pairs(pages) do p.Visible = false end
+    pages[name].Visible = true
+end
+
+--======================
+-- UI COMPONENTS
+--======================
+local function section(parent, text)
+    local box = Instance.new("Frame", parent)
+    box.Size = UDim2.new(1,0,0,120)
+    box.BackgroundColor3 = Color3.fromRGB(28,30,36)
+    box.BackgroundTransparency = 0.05
+    Instance.new("UICorner", box).CornerRadius = UDim.new(0,14)
+
+    local lbl = Instance.new("TextLabel", box)
+    lbl.Text = text
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 14
+    lbl.TextColor3 = Color3.fromRGB(255,255,255)
+    lbl.BackgroundTransparency = 1
+    lbl.Position = UDim2.new(0,16,0,10)
+    lbl.Size = UDim2.new(1,-32,0,20)
+
+    return box
+end
+
+local function toggle(parent, text, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Text = text .. " : OFF"
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 13
+    btn.TextColor3 = Color3.fromRGB(230,230,230)
+    btn.BackgroundColor3 = Color3.fromRGB(40,42,50)
+    btn.Size = UDim2.new(0.6,0,0,36)
+    btn.Position = UDim2.new(0,16,0,50)
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,10)
+
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.Text = text .. (state and " : ON" or " : OFF")
+        callback(state)
+    end)
+end
+
+--======================
+-- PAGES
+--======================
+local farm = newPage("Farm")
+local map = newPage("Map")
+local automatic = newPage("Automatic")
+local shop = newPage("Shop")
+
+--======================
+-- FARM CONTENT
+--======================
+local autoFish = section(farm, "AUTO FISHING")
+toggle(autoFish, "Auto Fishing Legit++", function(on)
+    if on then AutoLegit.Start() else AutoLegit.Stop() end
+end)
+
+toggle(autoFish, "Auto Fishing Blatant", function(on)
+    if on then AutoBlatant.Start() else AutoBlatant.Stop() end
+end)
+
+local autoSell = section(farm, "AUTO SELL FISH")
+-- kosong (logic nanti)
+
+--======================
+-- MAP / AUTOMATIC / SHOP (placeholder)
+--======================
+section(map, "MAP & TELEPORT")
+section(automatic, "AUTOMATION")
+section(shop, "SHOP")
+
+--======================
+-- SIDEBAR BUTTONS
+--======================
+local function sideBtn(text, page, order)
+    local b = Instance.new("TextButton", sidebar)
+    b.Text = text
+    b.Font = Enum.Font.Gotham
+    b.TextSize = 14
+    b.TextColor3 = Color3.fromRGB(220,220,220)
+    b.BackgroundTransparency = 1
+    b.Size = UDim2.new(1,0,0,42)
+    b.Position = UDim2.new(0,0,0,50 + (order*44))
+
+    b.MouseButton1Click:Connect(function()
+        showPage(page)
+    end)
+end
+
+sideBtn("Farm", "Farm", 0)
+sideBtn("Map", "Map", 1)
+sideBtn("Automatic", "Automatic", 2)
+sideBtn("Shop", "Shop", 3)
+
+--======================
+-- DEFAULT
+--======================
+showPage("Farm")
+print("ASPAN-HUB FINAL UI LOADED")
+
 -- Sidebar + Highlight + Minimize
 --==================================================
 
