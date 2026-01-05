@@ -1,220 +1,199 @@
---=====================================================
--- ASPAN-HUB FINAL | Fish It
--- AUTO LEGIT++ (Adaptive) + ULTRA BLATANT
---=====================================================
+--==================================================
+-- ASPAN-HUB UI TEMPLATE (Farm / Map / Automatic / Shop)
+-- LEGIT++ & BLATANT BUTTON READY
+--==================================================
 
------------------- SERVICES ------------------
 local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local VIM = game:GetService("VirtualInputManager")
 local player = Players.LocalPlayer
-local backpack = player:WaitForChild("Backpack")
 
------------------- SAVE SYSTEM ------------------
-local SAVE_FILE = "aspan_hub_settings.json"
-local HttpService = game:GetService("HttpService")
-
-local Settings = {
-    AutoLegit = false
-}
-
-pcall(function()
-    if readfile and isfile and isfile(SAVE_FILE) then
-        Settings = HttpService:JSONDecode(readfile(SAVE_FILE))
-    end
-end)
-
-local function saveSettings()
-    if writefile then
-        writefile(SAVE_FILE, HttpService:JSONEncode(Settings))
-    end
-end
-
------------------- STATE ------------------
-local Mode = { Legit = false, Blatant = false }
-local Hub = { Enabled = false, Freeze = true }
-local AutoFishingInGame = false
-
------------------- UTIL ------------------
-local function equipRod()
-    local char = player.Character
-    if not char then return end
-    for _,t in ipairs(char:GetChildren()) do
-        if t:IsA("Tool") and t.Name:lower():find("rod") then return end
-    end
-    for _,t in ipairs(backpack:GetChildren()) do
-        if t:IsA("Tool") and t.Name:lower():find("rod") then
-            char:FindFirstChildOfClass("Humanoid"):EquipTool(t)
-            return
-        end
-    end
-end
-
------------------- AUTO FISHING IN-GAME ------------------
-local function setAutoFishingState(state)
-    pcall(function()
-        local net = ReplicatedStorage
-            :WaitForChild("Packages")
-            :WaitForChild("_Index")
-            :WaitForChild("sleitnick_net@0.2.0")
-            :WaitForChild("net")
-        net:WaitForChild("RF/UpdateAutoFishingState"):InvokeServer(state)
-        AutoFishingInGame = state
-    end)
-end
-
------------------- LEGIT++ (ADAPTIVE) ------------------
-local function isQuickClick()
-    return Workspace:FindFirstChild("Exclaim", true) ~= nil
-end
-
-local adaptiveDelayFast = 0.025
-local adaptiveDelaySlow = 0.08
-local currentDelay = adaptiveDelaySlow
-
-task.spawn(function()
-    while true do
-        if Hub.Enabled and Mode.Legit then
-            equipRod()
-            if isQuickClick() then
-                currentDelay = adaptiveDelayFast
-                VIM:SendMouseButtonEvent(0,0,0,true,game,0)
-                task.wait(0.02)
-                VIM:SendMouseButtonEvent(0,0,0,false,game,0)
-            else
-                currentDelay = adaptiveDelaySlow
-            end
-        end
-        task.wait(currentDelay)
-    end
-end)
-
------------------- ULTRA BLATANT (YOUR SCRIPT) ------------------
-local UltraBlatant = loadstring([[
--- (script kamu persis, tidak diubah)
-]] )()
-
------------------- STOP ALL ------------------
-local function stopAll()
-    Mode.Legit = false
-    Mode.Blatant = false
-    Hub.Enabled = false
-    setAutoFishingState(false)
-    if UltraBlatant then UltraBlatant.Stop() end
-end
-
------------------- RESPAWN AUTO RE-ENABLE ------------------
-player.CharacterAdded:Connect(function()
-    task.wait(2)
-    if Settings.AutoLegit then
-        Mode.Legit = true
-        Hub.Enabled = true
-        setAutoFishingState(true)
-    end
-end)
-
------------------- UI ------------------
+--================= GUI =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "ASPAN_HUB"
+gui.Name = "ASPAN_HUB_UI"
 gui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.fromOffset(460,320)
-main.Position = UDim2.fromScale(0.5,0.5)
-main.AnchorPoint = Vector2.new(0.5,0.5)
-main.BackgroundColor3 = Color3.fromRGB(17,18,22)
+main.Size = UDim2.fromOffset(600, 360)
+main.Position = UDim2.fromScale(0.5, 0.5)
+main.AnchorPoint = Vector2.new(0.5, 0.5)
+main.BackgroundColor3 = Color3.fromRGB(20,22,28)
+main.BackgroundTransparency = 0.15
 main.BorderSizePixel = 0
 main.Active, main.Draggable = true, true
-Instance.new("UICorner", main).CornerRadius = UDim.new(0,18)
+Instance.new("UICorner", main).CornerRadius = UDim.new(0,16)
 
-local title = Instance.new("TextLabel", main)
-title.Size = UDim2.new(1,-20,0,40)
-title.Position = UDim2.fromOffset(10,6)
-title.Text = "ASPAN-HUB • Fish It"
-title.Font = Enum.Font.GothamBold
-title.TextSize = 16
-title.TextColor3 = Color3.fromRGB(0,230,200)
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.BackgroundTransparency = 1
+--================= SIDEBAR =================
+local sidebar = Instance.new("Frame", main)
+sidebar.Size = UDim2.new(0, 150, 1, 0)
+sidebar.BackgroundColor3 = Color3.fromRGB(16,18,23)
+sidebar.BackgroundTransparency = 0.2
+Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0,16)
 
-local status = Instance.new("TextLabel", main)
-status.Position = UDim2.fromOffset(20,50)
-status.Size = UDim2.fromOffset(420,24)
-status.Font = Enum.Font.Gotham
-status.TextSize = 14
-status.TextXAlignment = Enum.TextXAlignment.Left
-status.BackgroundTransparency = 1
+local sideList = Instance.new("UIListLayout", sidebar)
+sideList.Padding = UDim.new(0,10)
+sideList.HorizontalAlignment = Center
 
-task.spawn(function()
-    while true do
-        status.Text = "Auto Fishing In-Game: " .. (AutoFishingInGame and "ON" or "OFF")
-        status.TextColor3 = AutoFishingInGame and Color3.fromRGB(0,200,160) or Color3.fromRGB(200,80,80)
-        task.wait(0.3)
-    end
-end)
+local sidePad = Instance.new("UIPadding", sidebar)
+sidePad.PaddingTop = UDim.new(0,16)
 
--- AUTO LEGIT BUTTON
-local legitBtn = Instance.new("TextButton", main)
-legitBtn.Size = UDim2.fromOffset(420,44)
-legitBtn.Position = UDim2.fromOffset(20,90)
-legitBtn.Font = Enum.Font.GothamBold
-legitBtn.TextSize = 15
-legitBtn.BorderSizePixel = 0
-Instance.new("UICorner", legitBtn)
-
--- AUTO BLATANT BUTTON
-local blatBtn = Instance.new("TextButton", main)
-blatBtn.Size = UDim2.fromOffset(420,44)
-blatBtn.Position = UDim2.fromOffset(20,150)
-blatBtn.Font = Enum.Font.GothamBold
-blatBtn.TextSize = 15
-blatBtn.BorderSizePixel = 0
-Instance.new("UICorner", blatBtn)
-
-local function updateUI()
-    legitBtn.Text = Mode.Legit and "AUTO LEGIT++ : ON" or "AUTO LEGIT++ : OFF"
-    legitBtn.BackgroundColor3 = Mode.Legit and Color3.fromRGB(0,200,160) or Color3.fromRGB(90,95,120)
-
-    blatBtn.Text = Mode.Blatant and "AUTO BLATANT : ON" or "AUTO BLATANT : OFF"
-    blatBtn.BackgroundColor3 = Mode.Blatant and Color3.fromRGB(220,70,70) or Color3.fromRGB(120,80,80)
+local function createMenu(text)
+    local b = Instance.new("TextButton")
+    b.Size = UDim2.fromOffset(120, 36)
+    b.Text = text
+    b.Font = Enum.Font.GothamMedium
+    b.TextSize = 14
+    b.TextColor3 = Color3.fromRGB(230,230,230)
+    b.BackgroundColor3 = Color3.fromRGB(30,32,38)
+    b.BorderSizePixel = 0
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
+    b.Parent = sidebar
+    return b
 end
 
-legitBtn.MouseButton1Click:Connect(function()
-    if Mode.Legit then
-        stopAll()
-        Settings.AutoLegit = false
-    else
-        stopAll()
-        Mode.Legit = true
-        Hub.Enabled = true
-        Settings.AutoLegit = true
-        setAutoFishingState(true)
-    end
-    saveSettings()
-    updateUI()
-end)
+local farmBtn = createMenu("Farm")
+local mapBtn = createMenu("Map")
+local autoBtn = createMenu("Automatic")
+local shopBtn = createMenu("Shop")
 
-blatBtn.MouseButton1Click:Connect(function()
-    if Mode.Blatant then
-        stopAll()
-    else
-        stopAll()
-        Mode.Blatant = true
-        Hub.Enabled = true
-        UltraBlatant.Start()
-    end
-    Settings.AutoLegit = false
-    saveSettings()
-    updateUI()
-end)
+--================= CONTENT =================
+local content = Instance.new("Frame", main)
+content.Position = UDim2.fromOffset(150,0)
+content.Size = UDim2.new(1,-150,1,0)
+content.BackgroundTransparency = 1
 
--- Restore saved state
-if Settings.AutoLegit then
-    Mode.Legit = true
-    Hub.Enabled = true
-    setAutoFishingState(true)
+local pages = {}
+
+local function createPage(name)
+    local f = Instance.new("Frame", content)
+    f.Size = UDim2.fromScale(1,1)
+    f.Visible = false
+    f.BackgroundTransparency = 1
+    pages[name] = f
+
+    local pad = Instance.new("UIPadding", f)
+    pad.PaddingTop = UDim.new(0,20)
+    pad.PaddingLeft = UDim.new(0,20)
+    pad.PaddingRight = UDim.new(0,20)
+
+    local list = Instance.new("UIListLayout", f)
+    list.Padding = UDim.new(0,14)
+
+    return f
 end
-updateUI()
 
-print("ASPAN-HUB FINAL LOADED | LEGIT++ + ULTRA BLATANT")
+local farmPage = createPage("Farm")
+local mapPage = createPage("Map")
+local autoPage = createPage("Automatic")
+local shopPage = createPage("Shop")
+
+local function showPage(name)
+    for _,p in pairs(pages) do p.Visible = false end
+    pages[name].Visible = true
+end
+showPage("Farm")
+
+--================= UI COMPONENT =================
+local function title(text, parent)
+    local t = Instance.new("TextLabel", parent)
+    t.Size = UDim2.new(1,0,0,22)
+    t.Text = text
+    t.Font = Enum.Font.GothamBold
+    t.TextSize = 14
+    t.TextXAlignment = Left
+    t.TextColor3 = Color3.fromRGB(0,200,160)
+    t.BackgroundTransparency = 1
+end
+
+local function section(parent)
+    local f = Instance.new("Frame", parent)
+    f.Size = UDim2.new(1,0,0,60)
+    f.BackgroundColor3 = Color3.fromRGB(26,28,34)
+    f.BackgroundTransparency = 0.2
+    Instance.new("UICorner", f).CornerRadius = UDim.new(0,12)
+
+    local pad = Instance.new("UIPadding", f)
+    pad.PaddingLeft = UDim.new(0,14)
+    pad.PaddingRight = UDim.new(0,14)
+
+    return f
+end
+
+local function toggleRow(text, callback, parent)
+    local row = Instance.new("Frame", parent)
+    row.Size = UDim2.new(1,0,0,44)
+    row.BackgroundTransparency = 1
+
+    local lbl = Instance.new("TextLabel", row)
+    lbl.Size = UDim2.new(1,-60,1,0)
+    lbl.Text = text
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 14
+    lbl.TextXAlignment = Left
+    lbl.TextColor3 = Color3.fromRGB(230,230,230)
+    lbl.BackgroundTransparency = 1
+
+    local toggle = Instance.new("Frame", row)
+    toggle.Size = UDim2.fromOffset(44,22)
+    toggle.Position = UDim2.new(1,-44,0.5,-11)
+    toggle.BackgroundColor3 = Color3.fromRGB(80,80,80)
+    Instance.new("UICorner", toggle).CornerRadius = UDim.new(1,0)
+
+    local knob = Instance.new("Frame", toggle)
+    knob.Size = UDim2.fromOffset(18,18)
+    knob.Position = UDim2.fromOffset(2,2)
+    knob.BackgroundColor3 = Color3.fromRGB(230,230,230)
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1,0)
+
+    local state = false
+    toggle.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then
+            state = not state
+            if state then
+                toggle.BackgroundColor3 = Color3.fromRGB(60,200,160)
+                knob:TweenPosition(UDim2.fromOffset(24,2),"Out","Quad",0.15,true)
+            else
+                toggle.BackgroundColor3 = Color3.fromRGB(80,80,80)
+                knob:TweenPosition(UDim2.fromOffset(2,2),"Out","Quad",0.15,true)
+            end
+            callback(state)
+        end
+    end)
+end
+
+--================= FARM PAGE =================
+title("AUTO FISHING", farmPage)
+
+local fishingSection = section(farmPage)
+
+local function onLegitToggle(state)
+    print("AUTO LEGIT++:", state)
+    -- HUB.LegitStart() / Stop()
+end
+
+local function onBlatantToggle(state)
+    print("AUTO BLATANT:", state)
+    -- HUB.BlatantStart() / Stop()
+end
+
+toggleRow("Auto Fishing Legit++", onLegitToggle, fishingSection)
+toggleRow("Auto Fishing Blatant", onBlatantToggle, fishingSection)
+
+title("AUTO SELL FISH", farmPage)
+section(farmPage) -- kosong (logic nanti)
+
+--================= EMPTY PAGES =================
+title("MAP", mapPage)
+section(mapPage)
+
+title("AUTOMATIC", autoPage)
+section(autoPage)
+
+title("SHOP", shopPage)
+section(shopPage)
+
+--================= MENU LOGIC =================
+farmBtn.MouseButton1Click:Connect(function() showPage("Farm") end)
+mapBtn.MouseButton1Click:Connect(function() showPage("Map") end)
+autoBtn.MouseButton1Click:Connect(function() showPage("Automatic") end)
+shopBtn.MouseButton1Click:Connect(function() showPage("Shop") end)
+
+print("ASPAN-HUB UI TEMPLATE LOADED")
