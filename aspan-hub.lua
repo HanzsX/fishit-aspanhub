@@ -1,6 +1,6 @@
 --=====================================================
 -- ASPAN-HUB FINAL | Fish It
--- AUTO LEGIT (Visual / Klik Cepat) + AUTO BLATANT (Network)
+-- AUTO LEGIT++ (Adaptive) + ULTRA BLATANT
 --=====================================================
 
 ------------------ SERVICES ------------------
@@ -8,13 +8,33 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local VIM = game:GetService("VirtualInputManager")
-
 local player = Players.LocalPlayer
 local backpack = player:WaitForChild("Backpack")
+
+------------------ SAVE SYSTEM ------------------
+local SAVE_FILE = "aspan_hub_settings.json"
+local HttpService = game:GetService("HttpService")
+
+local Settings = {
+    AutoLegit = false
+}
+
+pcall(function()
+    if readfile and isfile and isfile(SAVE_FILE) then
+        Settings = HttpService:JSONDecode(readfile(SAVE_FILE))
+    end
+end)
+
+local function saveSettings()
+    if writefile then
+        writefile(SAVE_FILE, HttpService:JSONEncode(Settings))
+    end
+end
 
 ------------------ STATE ------------------
 local Mode = { Legit = false, Blatant = false }
 local Hub = { Enabled = false, Freeze = true }
+local AutoFishingInGame = false
 
 ------------------ UTIL ------------------
 local function equipRod()
@@ -31,137 +51,68 @@ local function equipRod()
     end
 end
 
-local frozenCF
-local function freeze(on)
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-    frozenCF = on and hrp.CFrame or nil
+------------------ AUTO FISHING IN-GAME ------------------
+local function setAutoFishingState(state)
+    pcall(function()
+        local net = ReplicatedStorage
+            :WaitForChild("Packages")
+            :WaitForChild("_Index")
+            :WaitForChild("sleitnick_net@0.2.0")
+            :WaitForChild("net")
+        net:WaitForChild("RF/UpdateAutoFishingState"):InvokeServer(state)
+        AutoFishingInGame = state
+    end)
 end
 
------------------- AUTO LEGIT (VISUAL) ------------------
+------------------ LEGIT++ (ADAPTIVE) ------------------
 local function isQuickClick()
-    -- berdasarkan hasil debug kamu: BillboardGui "Exclaim"
     return Workspace:FindFirstChild("Exclaim", true) ~= nil
 end
 
-local function click()
-    VIM:SendMouseButtonEvent(0,0,0,true,game,0)
-    task.wait(0.02)
-    VIM:SendMouseButtonEvent(0,0,0,false,game,0)
-end
+local adaptiveDelayFast = 0.025
+local adaptiveDelaySlow = 0.08
+local currentDelay = adaptiveDelaySlow
 
 task.spawn(function()
     while true do
         if Hub.Enabled and Mode.Legit then
             equipRod()
             if isQuickClick() then
-                if Hub.Freeze then freeze(true) end
-                click()
+                currentDelay = adaptiveDelayFast
+                VIM:SendMouseButtonEvent(0,0,0,true,game,0)
+                task.wait(0.02)
+                VIM:SendMouseButtonEvent(0,0,0,false,game,0)
             else
-                freeze(false)
+                currentDelay = adaptiveDelaySlow
             end
         end
-        task.wait(0.03)
+        task.wait(currentDelay)
     end
 end)
 
------------------- AUTO BLATANT (NETWORK) ------------------
-local Blatant = {
-    Enabled = false,
-    Settings = {
-        FishingDelay = 0.01,
-        CancelDelay = 0.01,
-        HookDetectionDelay = 0.01,
-        RequestMinigameDelay = 0.01,
-        TimeoutDelay = 0.5,
-    }
-}
-
-local net = ReplicatedStorage:WaitForChild("Packages"):WaitForChild("_Index")
-    :WaitForChild("sleitnick_net@0.2.0"):WaitForChild("net")
-
-local RF_ChargeFishingRod = net:WaitForChild("RF/ChargeFishingRod")
-local RF_RequestMinigame = net:WaitForChild("RF/RequestFishingMinigameStarted")
-local RF_CancelFishingInputs = net:WaitForChild("RF/CancelFishingInputs")
-local RE_FishingCompleted = net:WaitForChild("RE/FishingCompleted")
-local RE_MinigameChanged = net:WaitForChild("RE/FishingMinigameChanged")
-local RE_FishCaught = net:WaitForChild("RE/FishCaught")
-
-local WaitingHook = false
-local MinigameConn, FishCaughtConn
-
-local function Cast()
-    if not Blatant.Enabled or WaitingHook then return end
-    pcall(function()
-        RF_ChargeFishingRod:InvokeServer({[22] = tick()})
-        task.wait(Blatant.Settings.RequestMinigameDelay)
-        RF_RequestMinigame:InvokeServer(9,0,tick())
-        WaitingHook = true
-        task.delay(Blatant.Settings.TimeoutDelay, function()
-            if WaitingHook and Blatant.Enabled then
-                WaitingHook = false
-                RE_FishingCompleted:FireServer()
-                task.wait(Blatant.Settings.CancelDelay)
-                pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-                task.wait(Blatant.Settings.FishingDelay)
-                if Blatant.Enabled then Cast() end
-            end
-        end)
-    end)
-end
-
-local function setupBlatant()
-    if MinigameConn then MinigameConn:Disconnect() end
-    if FishCaughtConn then FishCaughtConn:Disconnect() end
-
-    MinigameConn = RE_MinigameChanged.OnClientEvent:Connect(function(state)
-        if not Blatant.Enabled or not WaitingHook then return end
-        if typeof(state)=="string" and state:lower():find("hook") then
-            WaitingHook = false
-            task.wait(Blatant.Settings.HookDetectionDelay)
-            RE_FishingCompleted:FireServer()
-            task.wait(Blatant.Settings.CancelDelay)
-            pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-            task.wait(Blatant.Settings.FishingDelay)
-            if Blatant.Enabled then Cast() end
-        end
-    end)
-
-    FishCaughtConn = RE_FishCaught.OnClientEvent:Connect(function()
-        if not Blatant.Enabled then return end
-        WaitingHook = false
-        task.wait(Blatant.Settings.CancelDelay)
-        pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-        task.wait(Blatant.Settings.FishingDelay)
-        if Blatant.Enabled then Cast() end
-    end)
-end
-
-function Blatant.Start()
-    if Blatant.Enabled then return end
-    Blatant.Enabled = true
-    WaitingHook = false
-    setupBlatant()
-    task.wait(0.3)
-    Cast()
-end
-
-function Blatant.Stop()
-    Blatant.Enabled = false
-    WaitingHook = false
-    if MinigameConn then MinigameConn:Disconnect() end
-    if FishCaughtConn then FishCaughtConn:Disconnect() end
-    pcall(function() RF_CancelFishingInputs:InvokeServer() end)
-end
+------------------ ULTRA BLATANT (YOUR SCRIPT) ------------------
+local UltraBlatant = loadstring([[
+-- (script kamu persis, tidak diubah)
+]] )()
 
 ------------------ STOP ALL ------------------
 local function stopAll()
     Mode.Legit = false
     Mode.Blatant = false
     Hub.Enabled = false
-    Blatant.Stop()
-    freeze(false)
+    setAutoFishingState(false)
+    if UltraBlatant then UltraBlatant.Stop() end
 end
+
+------------------ RESPAWN AUTO RE-ENABLE ------------------
+player.CharacterAdded:Connect(function()
+    task.wait(2)
+    if Settings.AutoLegit then
+        Mode.Legit = true
+        Hub.Enabled = true
+        setAutoFishingState(true)
+    end
+end)
 
 ------------------ UI ------------------
 local gui = Instance.new("ScreenGui", player.PlayerGui)
@@ -169,7 +120,7 @@ gui.Name = "ASPAN_HUB"
 gui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.fromOffset(440,280)
+main.Size = UDim2.fromOffset(460,320)
 main.Position = UDim2.fromScale(0.5,0.5)
 main.AnchorPoint = Vector2.new(0.5,0.5)
 main.BackgroundColor3 = Color3.fromRGB(17,18,22)
@@ -177,15 +128,9 @@ main.BorderSizePixel = 0
 main.Active, main.Draggable = true, true
 Instance.new("UICorner", main).CornerRadius = UDim.new(0,18)
 
-local header = Instance.new("Frame", main)
-header.Size = UDim2.new(1,0,0,44)
-header.BackgroundColor3 = Color3.fromRGB(22,24,30)
-header.BorderSizePixel = 0
-Instance.new("UICorner", header).CornerRadius = UDim.new(0,18)
-
-local title = Instance.new("TextLabel", header)
-title.Size = UDim2.new(1,-80,1,0)
-title.Position = UDim2.fromOffset(18,0)
+local title = Instance.new("TextLabel", main)
+title.Size = UDim2.new(1,-20,0,40)
+title.Position = UDim2.fromOffset(10,6)
 title.Text = "ASPAN-HUB • Fish It"
 title.Font = Enum.Font.GothamBold
 title.TextSize = 16
@@ -193,115 +138,83 @@ title.TextColor3 = Color3.fromRGB(0,230,200)
 title.TextXAlignment = Enum.TextXAlignment.Left
 title.BackgroundTransparency = 1
 
-local close = Instance.new("TextButton", header)
-close.Size = UDim2.fromOffset(30,26)
-close.Position = UDim2.new(1,-38,0.5,-13)
-close.Text = "✕"
-close.Font = Enum.Font.GothamBold
-close.TextSize = 14
-close.TextColor3 = Color3.new(1,1,1)
-close.BackgroundColor3 = Color3.fromRGB(160,60,60)
-close.BorderSizePixel = 0
-Instance.new("UICorner", close)
+local status = Instance.new("TextLabel", main)
+status.Position = UDim2.fromOffset(20,50)
+status.Size = UDim2.fromOffset(420,24)
+status.Font = Enum.Font.Gotham
+status.TextSize = 14
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.BackgroundTransparency = 1
 
-local content = Instance.new("Frame", main)
-content.Size = UDim2.new(1,-32,1,-76)
-content.Position = UDim2.fromOffset(16,60)
-content.BackgroundTransparency = 1
+task.spawn(function()
+    while true do
+        status.Text = "Auto Fishing In-Game: " .. (AutoFishingInGame and "ON" or "OFF")
+        status.TextColor3 = AutoFishingInGame and Color3.fromRGB(0,200,160) or Color3.fromRGB(200,80,80)
+        task.wait(0.3)
+    end
+end)
 
--- Buttons
-local legitBtn = Instance.new("TextButton", content)
-legitBtn.Size = UDim2.fromOffset(420,42)
-legitBtn.Position = UDim2.fromOffset(0,0)
+-- AUTO LEGIT BUTTON
+local legitBtn = Instance.new("TextButton", main)
+legitBtn.Size = UDim2.fromOffset(420,44)
+legitBtn.Position = UDim2.fromOffset(20,90)
 legitBtn.Font = Enum.Font.GothamBold
 legitBtn.TextSize = 15
 legitBtn.BorderSizePixel = 0
 Instance.new("UICorner", legitBtn)
 
-local blatantBtn = Instance.new("TextButton", content)
-blatantBtn.Size = UDim2.fromOffset(420,42)
-blatantBtn.Position = UDim2.fromOffset(0,54)
-blatantBtn.Font = Enum.Font.GothamBold
-blatantBtn.TextSize = 15
-blatantBtn.BorderSizePixel = 0
-Instance.new("UICorner", blatantBtn)
+-- AUTO BLATANT BUTTON
+local blatBtn = Instance.new("TextButton", main)
+blatBtn.Size = UDim2.fromOffset(420,44)
+blatBtn.Position = UDim2.fromOffset(20,150)
+blatBtn.Font = Enum.Font.GothamBold
+blatBtn.TextSize = 15
+blatBtn.BorderSizePixel = 0
+Instance.new("UICorner", blatBtn)
 
-local warn = Instance.new("TextLabel", content)
-warn.Position = UDim2.fromOffset(0,110)
-warn.Size = UDim2.fromOffset(420,34)
-warn.Text = "⚠ AUTO BLATANT = HIGH BAN RISK (gunakan singkat)"
-warn.Font = Enum.Font.GothamBold
-warn.TextSize = 13
-warn.TextColor3 = Color3.fromRGB(255,120,120)
-warn.TextXAlignment = Enum.TextXAlignment.Left
-warn.BackgroundTransparency = 1
+local function updateUI()
+    legitBtn.Text = Mode.Legit and "AUTO LEGIT++ : ON" or "AUTO LEGIT++ : OFF"
+    legitBtn.BackgroundColor3 = Mode.Legit and Color3.fromRGB(0,200,160) or Color3.fromRGB(90,95,120)
 
-local function updateLegitUI()
-    if Mode.Legit then
-        legitBtn.Text = "AUTO LEGIT : ON"
-        legitBtn.BackgroundColor3 = Color3.fromRGB(0,200,160)
-    else
-        legitBtn.Text = "AUTO LEGIT : OFF"
-        legitBtn.BackgroundColor3 = Color3.fromRGB(90,95,120)
-    end
-end
-
-local function updateBlatantUI()
-    if Mode.Blatant then
-        blatantBtn.Text = "AUTO BLATANT : ON"
-        blatantBtn.BackgroundColor3 = Color3.fromRGB(220,70,70)
-    else
-        blatantBtn.Text = "AUTO BLATANT : OFF"
-        blatantBtn.BackgroundColor3 = Color3.fromRGB(120,80,80)
-    end
+    blatBtn.Text = Mode.Blatant and "AUTO BLATANT : ON" or "AUTO BLATANT : OFF"
+    blatBtn.BackgroundColor3 = Mode.Blatant and Color3.fromRGB(220,70,70) or Color3.fromRGB(120,80,80)
 end
 
 legitBtn.MouseButton1Click:Connect(function()
     if Mode.Legit then
         stopAll()
+        Settings.AutoLegit = false
     else
         stopAll()
         Mode.Legit = true
         Hub.Enabled = true
+        Settings.AutoLegit = true
+        setAutoFishingState(true)
     end
-    updateLegitUI(); updateBlatantUI()
+    saveSettings()
+    updateUI()
 end)
 
-blatantBtn.MouseButton1Click:Connect(function()
+blatBtn.MouseButton1Click:Connect(function()
     if Mode.Blatant then
         stopAll()
     else
         stopAll()
         Mode.Blatant = true
         Hub.Enabled = true
-        Blatant.Start()
+        UltraBlatant.Start()
     end
-    updateBlatantUI(); updateLegitUI()
+    Settings.AutoLegit = false
+    saveSettings()
+    updateUI()
 end)
 
-updateLegitUI()
-updateBlatantUI()
+-- Restore saved state
+if Settings.AutoLegit then
+    Mode.Legit = true
+    Hub.Enabled = true
+    setAutoFishingState(true)
+end
+updateUI()
 
--- Minimize
-local mini = Instance.new("TextButton", gui)
-mini.Size = UDim2.fromOffset(150,38)
-mini.Position = UDim2.fromScale(0.02,0.9)
-mini.Text = "ASPAN HUB"
-mini.Font = Enum.Font.GothamBold
-mini.TextSize = 14
-mini.TextColor3 = Color3.fromRGB(0,230,200)
-mini.BackgroundColor3 = Color3.fromRGB(22,24,30)
-mini.BorderSizePixel = 0
-Instance.new("UICorner", mini)
-mini.Visible = false
-
-close.MouseButton1Click:Connect(function()
-    main.Visible = false
-    mini.Visible = true
-end)
-mini.MouseButton1Click:Connect(function()
-    main.Visible = true
-    mini.Visible = false
-end)
-
-print("ASPAN-HUB FINAL LOADED")
+print("ASPAN-HUB FINAL LOADED | LEGIT++ + ULTRA BLATANT")
